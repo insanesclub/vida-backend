@@ -1,4 +1,3 @@
-// Package instagram defines Instagram object models.
 package instagram
 
 // Tagpage represents an Instagram page source.

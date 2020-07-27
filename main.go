@@ -1,4 +1,3 @@
-// Package main runs API server of VIDA.
 package main
 
 import "github.com/gin-gonic/gin"

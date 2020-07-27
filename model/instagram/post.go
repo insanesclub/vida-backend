@@ -1,4 +1,3 @@
-// Package instagram defines Instagram object models.
 package instagram
 
 import (
@@ -14,6 +13,20 @@ type Post struct {
 				Name    string `json:"name"`
 				Address string `json:"address_json"`
 			} `json:"location"`
+			Owner struct {
+				// account name of user
+				Username string `json:"username"`
+				// profile name of user
+				FullName                 string `json:"full_name"`
+				EdgeOwnerToTimelineMedia struct {
+					// number of posts
+					Count int `json:"count"`
+				} `json:"edge_owner_to_timeline_media"`
+				EdgeFollowedBy struct {
+					// number of followers
+					Count int `json:"count"`
+				}
+			} `json:"owner"`
 		} `json:"shortcode_media"`
 	} `json:"graphql"`
 }
@@ -28,10 +41,10 @@ func (p Post) Geotag(query string) string {
 
 func (p Post) filter(query string) error {
 	if !strings.Contains(p.GraphQL.ShortcodeMedia.Location.Address, query) {
-		return errors.New("Address mismatch")
+		return errors.New("address mismatch")
 	}
 	if p.GraphQL.ShortcodeMedia.Location.Name == query {
-		return errors.New("Name mismatch")
+		return errors.New("name mismatch")
 	}
 	return nil
 }
