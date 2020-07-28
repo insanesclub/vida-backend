@@ -7,8 +7,7 @@ Back-end module of VIDA(Visualization tool for Instagram Data Analysis)
 0. Index
 
    - Fake user detector
-- Influencer intervention measurement
-   
+   - Influencer intervention measurement   
    
 
 
