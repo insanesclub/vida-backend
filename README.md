@@ -7,10 +7,10 @@ Back-end module of VIDA(Visualization tool for Instagram Data Analysis)
 0. Index
 
    - Fake user detector
+- Influencer intervention measurement
+   
+   
 
-   - Influencer intervention measurement
-
-<hr>
 
 1. Fake user detector (고의적 도배 이용자 감별기)
 
@@ -34,7 +34,7 @@ Back-end module of VIDA(Visualization tool for Instagram Data Analysis)
 
    오늘 측정한 결과를 내림차순 정렬하고 **막대 그래프**로 보여줍니다.
 
-   백엔드에서는 `tag`와 `date` 값을 받아 `uploads` 필드의 값을 반환하는 API를 제공할 예정입니다.
+   백엔드에서는 `tag`와 `date` 값을 받아 `uploads` 필드의 값을 반환하는 API를 제공합니다.
 
    
 
@@ -44,9 +44,9 @@ Back-end module of VIDA(Visualization tool for Instagram Data Analysis)
 
    보여주는 방식은 첫째와 같습니다.
 
-   백엔드에서는 `tag` 값을 받아 `uploads` 필드들의 누적 합산 결과를 반환하는 API를 제공할 예정입니다.
+   백엔드에서는 `tag` 값을 받아 `uploads` 필드들의 누적 합산 결과를 반환하는 API를 제공합니다.
 
-   <hr>
+   
 
 2. Influencer intervention measurement (인플루언서 개입 정도 측정기)
 
@@ -59,6 +59,6 @@ Back-end module of VIDA(Visualization tool for Instagram Data Analysis)
    ![sample](https://user-images.githubusercontent.com/29545214/88458152-ea6bc800-cec6-11ea-800e-a22f0d2d353a.png)
 
    
-   
+
    `// TODO: 2번 아이디어에 대한 시각화 방법 구체화`
 

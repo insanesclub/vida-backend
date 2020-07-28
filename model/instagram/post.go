@@ -27,6 +27,7 @@ type Post struct {
 					Count int `json:"count"`
 				}
 			} `json:"owner"`
+			TakenAtTimestamp int64 `json:"taken_at_timestamp"`
 		} `json:"shortcode_media"`
 	} `json:"graphql"`
 }
