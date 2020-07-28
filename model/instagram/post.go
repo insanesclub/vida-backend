@@ -3,6 +3,7 @@ package instagram
 import (
 	"errors"
 	"strings"
+	"time"
 )
 
 // Post represents an Instagram post.
@@ -33,19 +34,26 @@ type Post struct {
 }
 
 // Geotag parses geotag from p.
-func (p Post) Geotag(query string) string {
-	if err := p.filter(query); err != nil {
+func (p Post) Geotag(tag string) string {
+	if err := p.filterByLocation(tag); err != nil {
 		return ""
 	}
 	return p.GraphQL.ShortcodeMedia.Location.Name
 }
 
-func (p Post) filter(query string) error {
-	if !strings.Contains(p.GraphQL.ShortcodeMedia.Location.Address, query) {
+func (p Post) filterByLocation(tag string) error {
+	if !strings.Contains(p.GraphQL.ShortcodeMedia.Location.Address, tag) {
 		return errors.New("address mismatch")
 	}
-	if p.GraphQL.ShortcodeMedia.Location.Name == query {
+	if p.GraphQL.ShortcodeMedia.Location.Name == tag {
 		return errors.New("name mismatch")
 	}
 	return nil
+}
+
+// PostedToday checks whether p is posted today.
+func (p Post) PostedToday() bool {
+	var now = time.Now().Unix()
+	return now-now%86400 <= p.GraphQL.ShortcodeMedia.TakenAtTimestamp &&
+		p.GraphQL.ShortcodeMedia.TakenAtTimestamp < now-now%86400+86400
 }

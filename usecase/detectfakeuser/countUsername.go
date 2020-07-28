@@ -5,11 +5,28 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"sync/atomic"
 
 	"github.com/haxana/vida-backend/model/instagram"
 )
 
-const MAX_DEATH_CNT = 3
+const max_death_cnt = 3
+
+type atomicBool struct {
+	flag int32
+}
+
+func (b *atomicBool) set(value bool) {
+	var i int32
+	if value {
+		i = 1
+	}
+	atomic.StoreInt32(&b.flag, i)
+}
+
+func (b *atomicBool) get() bool {
+	return atomic.LoadInt32(&b.flag) == 1
+}
 
 // Usernames counts user names from the search results on Instagram with a given query.
 func Usernames(tag string) map[string]int {
@@ -21,69 +38,71 @@ func Usernames(tag string) map[string]int {
 		syncer.Wait()
 		close(usernames)
 	}()
-
-	var user_map sync.Map
+	var user_map = make(map[string]int)
 
 	for username := range usernames {
-		syncer.Add(1)
-		go func(username string) {
-			defer syncer.Done()
-			if cnt, loaded := user_map.LoadOrStore(username, 1); loaded {
-				user_map.Store(username, cnt.(int)+1)
-			}
-		}(username)
+		user_map[username]++
 	}
-	syncer.Wait()
-
-	var userMap = make(map[string]int)
-
-	user_map.Range(func(name, cnt interface{}) bool {
-		userMap[name.(string)] = cnt.(int)
-		return true
-	})
-
-	return userMap
+	return user_map
 }
 
 func parsePage(tag string, ch chan<- string, syncer *sync.WaitGroup) {
 	defer syncer.Done()
 	var (
-		has_next_page = true
+		has_next_page = &atomicBool{flag: 1}
 		end_cursor    string
 	)
-	for has_next_page {
-		resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/explore/tags/%s/?__a=1&max_id=%s", tag, end_cursor))
-		if err != nil || resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusTooManyRequests {
-			return
+	for has_next_page.get() {
+		var death_cnt int
+		for death_cnt < max_death_cnt {
+			resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/explore/tags/%s/?__a=1&max_id=%s", tag, end_cursor))
+			if err != nil {
+				death_cnt++
+			} else if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusTooManyRequests {
+				death_cnt++
+			} else {
+				defer resp.Body.Close()
+				var page = new(instagram.Tagpage)
+				if err := json.NewDecoder(resp.Body).Decode(page); err != nil {
+					death_cnt++
+				} else {
+					has_next_page.set(page.GraphQL.Hashtag.EdgeHashtagToMedia.PageInfo.HasNextPage)
+					end_cursor = page.GraphQL.Hashtag.EdgeHashtagToMedia.PageInfo.EndCursor
+					for _, shortcode := range page.Shortcodes() {
+						syncer.Add(1)
+						go parseUsername(shortcode, has_next_page, ch, syncer)
+					}
+					break
+				}
+			}
 		}
-		defer resp.Body.Close()
-
-		var page instagram.Tagpage
-		if err = json.NewDecoder(resp.Body).Decode(&page); err != nil {
-			return
-		}
-		has_next_page = page.GraphQL.Hashtag.EdgeHashtagToMedia.PageInfo.HasNextPage
-		end_cursor = page.GraphQL.Hashtag.EdgeHashtagToMedia.PageInfo.EndCursor
-
-		for _, shortcode := range page.Shortcodes() {
-			syncer.Add(1)
-			go parseUsername(shortcode, ch, syncer)
+		if death_cnt >= max_death_cnt {
+			break
 		}
 	}
 }
 
-func parseUsername(shortcode string, ch chan<- string, syncer *sync.WaitGroup) {
+func parseUsername(shortcode string, has_next_page *atomicBool, ch chan<- string, syncer *sync.WaitGroup) {
 	defer syncer.Done()
-
-	resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/p/%s/?__a=1", shortcode))
-	if err != nil || resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusTooManyRequests {
-		return
+	var death_cnt int
+	for death_cnt < max_death_cnt {
+		resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/p/%s/?__a=1", shortcode))
+		if err != nil {
+			death_cnt++
+		} else if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusTooManyRequests {
+			death_cnt++
+		} else {
+			defer resp.Body.Close()
+			var post = new(instagram.Post)
+			if err := json.NewDecoder(resp.Body).Decode(post); err != nil {
+				death_cnt++
+			} else if !post.PostedToday() {
+				has_next_page.set(false)
+				return
+			} else {
+				ch <- post.GraphQL.ShortcodeMedia.Owner.Username
+				return
+			}
+		}
 	}
-	defer resp.Body.Close()
-
-	var post instagram.Post
-	if err = json.NewDecoder(resp.Body).Decode(&post); err != nil {
-		return
-	}
-	ch <- post.GraphQL.ShortcodeMedia.Owner.Username
 }
