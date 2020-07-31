@@ -1,4 +1,4 @@
-package detectfakeuser
+package crawler
 
 import (
 	"encoding/json"
@@ -6,30 +6,20 @@ import (
 	"net/http"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/haxana/vida-backend/model/instagram"
 )
 
-const max_death_cnt = 3
+const (
+	_ int32 = iota
+	done
+	_
+	max_death_cnt
+)
 
-type atomicBool struct {
-	flag int32
-}
-
-func (b *atomicBool) set(value bool) {
-	var i int32
-	if value {
-		i = 1
-	}
-	atomic.StoreInt32(&b.flag, i)
-}
-
-func (b *atomicBool) get() bool {
-	return atomic.LoadInt32(&b.flag) == 1
-}
-
-// Usernames counts user names from the search results on Instagram with a given query.
-func Usernames(tag string) map[string]int {
+// Uploads counts user names from the search results on Instagram with a given query.
+func Uploads(tag string) map[string]int {
 	var usernames = make(chan string)
 	var syncer sync.WaitGroup
 	syncer.Add(1)
@@ -38,23 +28,23 @@ func Usernames(tag string) map[string]int {
 		syncer.Wait()
 		close(usernames)
 	}()
-	var user_map = make(map[string]int)
+	var uploads = make(map[string]int)
 
 	for username := range usernames {
-		user_map[username]++
+		uploads[username]++
 	}
-	return user_map
+	return uploads
 }
 
 func parsePage(tag string, ch chan<- string, syncer *sync.WaitGroup) {
 	defer syncer.Done()
 	var (
-		has_next_page = &atomicBool{flag: 1}
-		end_cursor    string
+		flag       int32
+		end_cursor string
 	)
-	for has_next_page.get() {
-		var death_cnt int
-		for death_cnt < max_death_cnt {
+	for atomic.LoadInt32(&flag) != done {
+		var death_cnt int32
+		for death_cnt < max_death_cnt { // retry up to maximum death count
 			resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/explore/tags/%s/?__a=1&max_id=%s", tag, end_cursor))
 			if err != nil {
 				death_cnt++
@@ -66,25 +56,28 @@ func parsePage(tag string, ch chan<- string, syncer *sync.WaitGroup) {
 				if err := json.NewDecoder(resp.Body).Decode(page); err != nil {
 					death_cnt++
 				} else {
-					has_next_page.set(page.GraphQL.Hashtag.EdgeHashtagToMedia.PageInfo.HasNextPage)
-					end_cursor = page.GraphQL.Hashtag.EdgeHashtagToMedia.PageInfo.EndCursor
 					for _, shortcode := range page.Shortcodes() {
 						syncer.Add(1)
-						go parseUsername(shortcode, has_next_page, ch, syncer)
+						go parseUsername(shortcode, &flag, ch, syncer)
+					}
+					time.Sleep(0) // force context switching
+					end_cursor = page.GraphQL.Hashtag.EdgeHashtagToMedia.PageInfo.EndCursor
+					if !page.GraphQL.Hashtag.EdgeHashtagToMedia.PageInfo.HasNextPage {
+						return
 					}
 					break
 				}
 			}
 		}
-		if death_cnt >= max_death_cnt {
+		if death_cnt > max_death_cnt { // aborted when the maximum death count is exceeded
 			break
 		}
 	}
 }
 
-func parseUsername(shortcode string, has_next_page *atomicBool, ch chan<- string, syncer *sync.WaitGroup) {
+func parseUsername(shortcode string, flag *int32, ch chan<- string, syncer *sync.WaitGroup) {
 	defer syncer.Done()
-	var death_cnt int
+	var death_cnt int32
 	for death_cnt < max_death_cnt {
 		resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/p/%s/?__a=1", shortcode))
 		if err != nil {
@@ -97,7 +90,7 @@ func parseUsername(shortcode string, has_next_page *atomicBool, ch chan<- string
 			if err := json.NewDecoder(resp.Body).Decode(post); err != nil {
 				death_cnt++
 			} else if !post.PostedToday() {
-				has_next_page.set(false)
+				atomic.StoreInt32(flag, done)
 				return
 			} else {
 				ch <- post.GraphQL.ShortcodeMedia.Owner.Username

@@ -4,10 +4,17 @@ Back-end module of VIDA(Visualization tool for Instagram Data Analysis)
 
 
 
+- Server domain:Port number
+
+  Public DNS(IPv4): `http://ec2-3-35-24-235.ap-northeast-2.compute.amazonaws.com:8080`
+
+  
+
 0. Index
 
    - Fake user detector
-   - Influencer intervention measurement   
+   - Influencer intervention measurement
+   
    
 
 
@@ -17,9 +24,19 @@ Back-end module of VIDA(Visualization tool for Instagram Data Analysis)
 
    매일매일 해당 해시태그를 포함한 게시물을 업로드하는 사용자들의 빈도를 측정합니다.
 
-   만약 오늘 `#신촌맛집`으로 `user_A`라는 사용자가 3개의 게시물을, `user_B`라는 사용자가 2개의 게시물을 업로드했다면 다음과 같은 정보가 저장됩니다.
+   | method |     path     |      request      |                         response                          |
+| :----: | :----------: | :---------------: | :-------------------------------------------------------: |
+   | `GET`  | /api/uploads | (string) 해시태그 | (JSON) 금일 해당 해시태그로 게시물을 올린 사용자들의 빈도 |
 
-   ![sample](https://user-images.githubusercontent.com/29545214/88458101-69accc00-cec6-11ea-833b-f05fed461b05.png)
+   - Query string 예시
+   
+     `tag=신촌맛집`
+
+   - Response body 예시
+
+     만약 오늘 `#신촌맛집`으로 `user_A`라는 사용자가 3개의 게시물을, `user_B`라는 사용자가 2개의 게시물을 업로드했다면 다음과 같은 내용의 JSON이 반환됩니다.
+   
+     ![sample](https://user-images.githubusercontent.com/29545214/88988534-21513c00-d314-11ea-87d8-ecee6c18c2e7.png)
 
    
 
