@@ -1,5 +1,7 @@
 package instagram
 
+import "time"
+
 // Tagpage represents an Instagram page source.
 type Tagpage struct {
 	GraphQL struct {
@@ -11,7 +13,8 @@ type Tagpage struct {
 				} `json:"page_info"`
 				Edges []struct {
 					Node struct {
-						Shortcode string `json:"shortcode"`
+						Shortcode        string `json:"shortcode"`
+						TakenAtTimestamp int64  `json:"taken_at_timestamp"`
 					} `json:"node"`
 				} `json:"edges"`
 			} `json:"edge_hashtag_to_media"`
@@ -19,10 +22,17 @@ type Tagpage struct {
 	} `json:"graphql"`
 }
 
-// Shortcodes parses URLs from t.
+// Shortcodes parses shortcodes from t.
 func (t Tagpage) Shortcodes() (shortcodes []string) {
+	var now = time.Now().Unix()
+	postedToday := func(timestamp int64) bool {
+		return now-now%86400 <= timestamp &&
+			timestamp < now-now%86400+86400
+	}
 	for _, edge := range t.GraphQL.Hashtag.EdgeHashtagToMedia.Edges {
-		shortcodes = append(shortcodes, edge.Node.Shortcode)
+		if postedToday(edge.Node.TakenAtTimestamp) {
+			shortcodes = append(shortcodes, edge.Node.Shortcode)
+		}
 	}
 	return
 }

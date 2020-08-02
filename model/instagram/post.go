@@ -3,7 +3,6 @@ package instagram
 import (
 	"errors"
 	"strings"
-	"time"
 )
 
 // Post represents an Instagram post.
@@ -28,7 +27,6 @@ type Post struct {
 					Count int `json:"count"`
 				}
 			} `json:"owner"`
-			TakenAtTimestamp int64 `json:"taken_at_timestamp"`
 		} `json:"shortcode_media"`
 	} `json:"graphql"`
 }
@@ -49,11 +47,4 @@ func (p Post) filterByLocation(tag string) error {
 		return errors.New("name mismatch")
 	}
 	return nil
-}
-
-// PostedToday checks whether p is posted today.
-func (p Post) PostedToday() bool {
-	var now = time.Now().Unix()
-	return now-now%86400 <= p.GraphQL.ShortcodeMedia.TakenAtTimestamp &&
-		p.GraphQL.ShortcodeMedia.TakenAtTimestamp < now-now%86400+86400
 }
