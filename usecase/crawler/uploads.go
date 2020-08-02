@@ -14,7 +14,7 @@ import (
 
 const max_death_cnt = 3
 
-// Uploads counts user names from the search results on Instagram with a given query.
+// Uploads counts user names from the search results on Instagram with a given tag.
 func Uploads(tag string) map[string]int {
 	var usernames = make(chan string)
 	var syncer sync.WaitGroup
