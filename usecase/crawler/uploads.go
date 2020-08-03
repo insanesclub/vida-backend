@@ -3,6 +3,7 @@ package crawler
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -47,7 +48,21 @@ func parsePage(tag string, ch chan<- string, syncer *sync.WaitGroup) {
 			var url = fmt.Sprintf("https://www.instagram.com/explore/tags/%s/?__a=1&max_id=%s", tag, end_cursor)
 			logging(fmt.Sprintf("requesting to %s", url))
 
-			resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/explore/tags/%s/?__a=1&max_id=%s", tag, end_cursor))
+			// resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/explore/tags/%s/?__a=1&max_id=%s", tag, end_cursor))
+			var request, err = http.NewRequest("GET", url, nil)
+			if err != nil {
+				/*
+					logging for test
+				*/
+				logging(fmt.Sprintf("http.NewRequest: %v", err))
+
+				death_cnt++
+				continue
+			}
+			request.Header.Set("Accept", "application/json")
+			var client = new(http.Client)
+			resp, err := client.Do(request)
+
 			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusTooManyRequests {
 				/*
 					logging for test
@@ -68,16 +83,36 @@ func parsePage(tag string, ch chan<- string, syncer *sync.WaitGroup) {
 			}
 			defer resp.Body.Close()
 			var page = new(instagram.Tagpage)
-			if err := json.NewDecoder(resp.Body).Decode(page); err != nil {
+			// if err := json.NewDecoder(resp.Body).Decode(page); err != nil {
+			// 	/*
+			// 		logging for test
+			// 	*/
+			// 	logging(fmt.Sprintf("json: %v on requesting to %s", err, url))
+
+			// 	death_cnt++
+			// 	continue
+			// }
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
 				/*
 					logging for test
 				*/
-				logging(fmt.Sprintf("json: %v on requesting to %s", err, url))
+				logging(fmt.Sprintf("ioutil.ReadAll: %v while parsing from %s", err, url))
 
 				death_cnt++
 				continue
 			}
-			var shortcodes = page.Shortcodes()
+			if err = json.Unmarshal(body, page); err != nil {
+				/*
+					logging for test
+				*/
+				logging(fmt.Sprintf("json.Unmarshal: %v while parsing from %s", err, url))
+				logging(string(body))
+
+				death_cnt++
+				continue
+			}
+			var shortcodes = page.FilterByTimestamp()
 			for _, shortcode := range shortcodes {
 				syncer.Add(1)
 				go parseUsername(shortcode, ch, syncer)
@@ -109,7 +144,22 @@ func parseUsername(shortcode string, ch chan<- string, syncer *sync.WaitGroup) {
 		*/
 		logging(fmt.Sprintf("requesting to %s", url))
 
-		resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/p/%s/?__a=1", shortcode))
+		// resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/p/%s/?__a=1", shortcode))
+
+		var request, err = http.NewRequest("GET", url, nil)
+		if err != nil {
+			/*
+				logging for test
+			*/
+			logging(fmt.Sprintf("http.NewRequest: %v", err))
+
+			death_cnt++
+			continue
+		}
+		request.Header.Set("Accept", "application/json")
+		var client = new(http.Client)
+		resp, err := client.Do(request)
+
 		if resp.StatusCode == http.StatusNotFound { // give up in the event of PAGE NOT FOUND
 			return
 		}
@@ -133,11 +183,31 @@ func parseUsername(shortcode string, ch chan<- string, syncer *sync.WaitGroup) {
 		}
 		defer resp.Body.Close()
 		var post = new(instagram.Post)
-		if err := json.NewDecoder(resp.Body).Decode(post); err != nil {
+		// if err := json.NewDecoder(resp.Body).Decode(post); err != nil {
+		// 	/*
+		// 		logging for test
+		// 	*/
+		// 	logging(fmt.Sprintf("json: %v on requesting to %s", err, url))
+
+		// 	death_cnt++
+		// 	continue
+		// }
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
 			/*
 				logging for test
 			*/
-			logging(fmt.Sprintf("json: %v on requesting to %s", err, url))
+			logging(fmt.Sprintf("ioutil.ReadAll: %v while parsing from %s", err, url))
+
+			death_cnt++
+			continue
+		}
+		if err = json.Unmarshal(body, post); err != nil {
+			/*
+				logging for test
+			*/
+			logging(fmt.Sprintf("json.Unmarshal: %v while parsing from %s", err, url))
+			logging(string(body))
 
 			death_cnt++
 			continue

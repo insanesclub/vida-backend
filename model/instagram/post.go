@@ -1,9 +1,6 @@
 package instagram
 
-import (
-	"errors"
-	"strings"
-)
+import "strings"
 
 // Post represents an Instagram post.
 type Post struct {
@@ -31,20 +28,10 @@ type Post struct {
 	} `json:"graphql"`
 }
 
-// Geotag parses geotag from p.
-func (p Post) Geotag(tag string) string {
-	if err := p.filterByLocation(tag); err != nil {
-		return ""
+// FilterByLocation returns geotag of p.
+func (p Post) FilterByLocation(tag string) (geotag string) {
+	if strings.Contains(p.GraphQL.ShortcodeMedia.Location.Address, tag) && p.GraphQL.ShortcodeMedia.Location.Name != tag {
+		geotag = p.GraphQL.ShortcodeMedia.Location.Name
 	}
-	return p.GraphQL.ShortcodeMedia.Location.Name
-}
-
-func (p Post) filterByLocation(tag string) error {
-	if !strings.Contains(p.GraphQL.ShortcodeMedia.Location.Address, tag) {
-		return errors.New("address mismatch")
-	}
-	if p.GraphQL.ShortcodeMedia.Location.Name == tag {
-		return errors.New("name mismatch")
-	}
-	return nil
+	return
 }

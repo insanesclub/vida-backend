@@ -22,15 +22,12 @@ type Tagpage struct {
 	} `json:"graphql"`
 }
 
-// Shortcodes parses shortcodes from t.
-func (t Tagpage) Shortcodes() (shortcodes []string) {
+// FilterByTimestamp returns the shortcodes of the posts posted today on t.
+func (t Tagpage) FilterByTimestamp() (shortcodes []string) {
 	var now = time.Now().Unix()
-	postedToday := func(timestamp int64) bool {
-		return now-now%86400 <= timestamp &&
-			timestamp < now-now%86400+86400
-	}
 	for _, edge := range t.GraphQL.Hashtag.EdgeHashtagToMedia.Edges {
-		if postedToday(edge.Node.TakenAtTimestamp) {
+		if now-now%86400 <= edge.Node.TakenAtTimestamp &&
+			edge.Node.TakenAtTimestamp < now-now%86400+86400 {
 			shortcodes = append(shortcodes, edge.Node.Shortcode)
 		}
 	}
