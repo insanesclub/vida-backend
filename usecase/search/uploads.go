@@ -1,4 +1,4 @@
-package crawl
+package search
 
 import (
 	"sync"
@@ -7,7 +7,7 @@ import (
 	"github.com/haxana/vida-backend/usecase/instagram"
 )
 
-// Uploads returns a map that contains the users' upload frequency information with a given tag.
+// Uploads counts the frequency of users uploading posts with a given tag.
 func Uploads(tag string) map[string]int {
 	var usernames = make(chan string)
 	var syncer = new(sync.WaitGroup)
@@ -29,11 +29,11 @@ func parsePage(tag string, ch chan<- string, syncer *sync.WaitGroup) {
 	defer syncer.Done()
 
 	var (
-		has_next_page = true
-		parser        = instagram.PageParserGenerator(tag)
+		goNext = true
+		parser = instagram.PageParserGenerator(tag)
 	)
 
-	for has_next_page {
+	for goNext {
 		var page, err = parser()
 		if err != nil {
 			return
@@ -44,7 +44,7 @@ func parsePage(tag string, ch chan<- string, syncer *sync.WaitGroup) {
 			go parseUsername(shortcode, ch, syncer)
 		}
 		time.Sleep(0) // force context switching
-		has_next_page = (len(page.GraphQL.Hashtag.EdgeHashtagToMedia.Edges) == len(shortcodes)) &&
+		goNext = (len(page.GraphQL.Hashtag.EdgeHashtagToMedia.Edges) == len(shortcodes)) &&
 			page.GraphQL.Hashtag.EdgeHashtagToMedia.PageInfo.HasNextPage
 	}
 }
