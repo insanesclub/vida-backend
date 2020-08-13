@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/haxana/vida-backend/usecase/crawl"
+	"github.com/haxana/vida-backend/usecase/search"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,8 +17,8 @@ func Uploads() gin.HandlerFunc {
 		} else {
 			c.JSON(http.StatusOK, map[string]interface{}{
 				"tag":     tag,
-				"date":    time.Now().Format(time.RFC3339[:10]),
-				"uploads": crawl.Uploads(tag),
+				"date":    time.Now().UTC().Format(time.RFC3339[:10]),
+				"uploads": search.Uploads(tag),
 			})
 		}
 	}
