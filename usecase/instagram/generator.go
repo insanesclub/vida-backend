@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/haxana/vida-backend/model/instagram"
+	"github.com/maengsanha/vida-backend/model/instagram"
 )
 
 const max_death_cnt = 3

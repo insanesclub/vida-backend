@@ -4,7 +4,7 @@ import (
 	"runtime"
 
 	"github.com/gin-gonic/gin"
-	"github.com/haxana/vida-backend/middleware"
+	"github.com/maengsanha/vida-backend/middleware"
 )
 
 func main() {

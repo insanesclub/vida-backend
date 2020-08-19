@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/haxana/vida-backend/usecase/instagram"
+	"github.com/maengsanha/vida-backend/usecase/instagram"
 )
 
 // Uploads counts the frequency of users uploading posts with a given tag.
