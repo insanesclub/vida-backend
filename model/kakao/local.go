@@ -4,6 +4,16 @@ package kakao
 // See https://developers.kakao.com/docs/latest/ko/local/dev-guide#search-by-keyword
 type LocalAPIResult struct {
 	Documents []struct {
+		Meta struct {
+			IsEnd         bool `json:"is_end"`
+			PageableCount int  `json:"pageable_count"`
+			SameName      struct {
+				Keyword        string   `json:"keyword"`
+				Region         []string `json:"region"`
+				SelectedRegion string   `json:"selected_region"`
+			} `json:"same_name"`
+			TotalCount int `json:"total_count"`
+		} `json:"meta"`
 		ID                string `json:"id"`
 		PlaceName         string `json:"place_name"`
 		CategoryName      string `json:"category_name"`
@@ -17,16 +27,6 @@ type LocalAPIResult struct {
 		PlaceURL          string `json:"place_url"`
 		Distance          string `json:"distance"`
 	} `json:"documents"`
-	Meta struct {
-		IsEnd         bool `json:"is_end"`
-		PageableCount int  `json:"pageable_count"`
-		SameName      struct {
-			Keyword        string   `json:"keyword"`
-			Region         []string `json:"region"`
-			SelectedRegion string   `json:"selected_region"`
-		} `json:"same_name"`
-		TotalCount int `json:"total_count"`
-	} `json:"meta"`
 }
 
 // Places returns place URLs in l.

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/benbjohnson/phantomjs"
 	"github.com/maengsanha/vida-backend/model/kakao"
 )
 
@@ -27,16 +28,18 @@ func LocalAPIParserGenerator(query string) func() (kakao.LocalAPIResult, error) 
 	}
 }
 
-// MapParserGenerator generates a kakao map parser.
-func MapParserGenerator(url string) func() error {
-	return func() error {
-		resp, err := http.Get(url)
-		if err != nil {
-			return err
-		}
-		fmt.Println(url)
-		fmt.Println(resp.Body)
-		defer resp.Body.Close()
+func CrawlWithPhantom(url string) error {
+	if err := phantomjs.DefaultProcess.Open(); err != nil {
 		return err
 	}
+	defer phantomjs.DefaultProcess.Close()
+	page, err := phantomjs.CreateWebPage()
+	if err != nil {
+		return err
+	}
+	if err = page.Open(url); err != nil {
+		return err
+	}
+
+	return nil
 }
