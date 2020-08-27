@@ -25,7 +25,7 @@ func PageParserGenerator(tag string) func() (instagram.Tagpage, error) {
 
 		for death_cnt < max_death_cnt { // retry up to maximum death count
 			var resp = new(http.Response)
-			resp, err := http.Get(fmt.Sprintf("http://www.instagram.com/explore/tags/%s?__a=1&max_id=%s", tag, end_cursor))
+			resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/explore/tags/%s/?__a=1&max_id=%s", tag, end_cursor))
 			if err != nil {
 				death_cnt++
 				continue // RETRY INSTRUCTION
@@ -55,7 +55,7 @@ func PostParserGenerator(shortcode string) func() (instagram.Post, error) {
 		var death_cnt int
 
 		for death_cnt < max_death_cnt { // retry up to maximum death count
-			resp, err := http.Get(fmt.Sprintf("http://www.instagram.com/p/%s?__a=1", shortcode))
+			resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/p/%s/?__a=1", shortcode))
 			if err != nil {
 				death_cnt++
 				continue // RETRY INSTRUCTION
