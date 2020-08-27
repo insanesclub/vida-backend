@@ -1,5 +1,8 @@
-module github.com/haxana/vida-backend
+module github.com/maengsanha/vida-backend
 
-go 1.14
+go 1.15
 
-require github.com/gin-gonic/gin v1.6.3
+require (
+	github.com/PuerkitoBio/goquery v1.5.1
+	github.com/gin-gonic/gin v1.6.3
+)

@@ -24,7 +24,7 @@ type Tagpage struct {
 
 // FilterByTimestamp returns the shortcodes of the posts posted today on t.
 func (t Tagpage) FilterByTimestamp() (shortcodes []string) {
-	var now = time.Now().Unix()
+	now := time.Now().Unix()
 	for _, edge := range t.GraphQL.Hashtag.EdgeHashtagToMedia.Edges {
 		if now-now%86400 <= edge.Node.TakenAtTimestamp &&
 			edge.Node.TakenAtTimestamp < now-now%86400+86400 {

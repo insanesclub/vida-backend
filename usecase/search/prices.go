@@ -1,0 +1,3 @@
+package search
+
+func Prices() {}

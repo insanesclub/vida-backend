@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/haxana/vida-backend/usecase/search"
+	"github.com/maengsanha/vida-backend/usecase/search"
 
 	"github.com/gin-gonic/gin"
 )

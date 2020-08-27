@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/haxana/vida-backend/model/instagram"
+	"github.com/maengsanha/vida-backend/model/instagram"
 )
 
 const max_death_cnt = 3
@@ -17,16 +17,15 @@ func PageParserGenerator(tag string) func() (instagram.Tagpage, error) {
 		end_cursor    string
 	)
 
-	return func() (page instagram.Tagpage, err error) {
+	return func() (page instagram.Tagpage, _ error) {
 		if !has_next_page {
-			err = fmt.Errorf("has_next_page: %t", has_next_page)
-			return
+			return page, fmt.Errorf("has_next_page: %t", has_next_page)
 		}
 		var death_cnt int
 
 		for death_cnt < max_death_cnt { // retry up to maximum death count
 			var resp = new(http.Response)
-			resp, err = http.Get(fmt.Sprintf("http://www.instagram.com/explore/tags/%s?__a=1&max_id=%s", tag, end_cursor))
+			resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/explore/tags/%s/?__a=1&max_id=%s", tag, end_cursor))
 			if err != nil {
 				death_cnt++
 				continue // RETRY INSTRUCTION
@@ -43,29 +42,26 @@ func PageParserGenerator(tag string) func() (instagram.Tagpage, error) {
 			}
 			has_next_page = page.GraphQL.Hashtag.EdgeHashtagToMedia.PageInfo.HasNextPage
 			end_cursor = page.GraphQL.Hashtag.EdgeHashtagToMedia.PageInfo.EndCursor
-			return
+			return page, nil
 		}
 		// aborted when the maximum death count is exceeded
-		err = fmt.Errorf("death count exceeded %d", death_cnt)
-		return
+		return page, fmt.Errorf("death count exceeded %d", death_cnt)
 	}
 }
 
 // PostParserGenerator generates an Instagram post parser.
 func PostParserGenerator(shortcode string) func() (instagram.Post, error) {
-	return func() (post instagram.Post, err error) {
+	return func() (post instagram.Post, _ error) {
 		var death_cnt int
 
 		for death_cnt < max_death_cnt { // retry up to maximum death count
-			var resp = new(http.Response)
-			resp, err = http.Get(fmt.Sprintf("http://www.instagram.com/p/%s?__a=1", shortcode))
+			resp, err := http.Get(fmt.Sprintf("https://www.instagram.com/p/%s/?__a=1", shortcode))
 			if err != nil {
 				death_cnt++
 				continue // RETRY INSTRUCTION
 			}
 			if resp.StatusCode == http.StatusNotFound { // give up in the event of PAGE NOT FOUND
-				err = fmt.Errorf("failed with status code %d", resp.StatusCode)
-				return
+				return post, fmt.Errorf("failed with status code %d", resp.StatusCode)
 			}
 			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusTooManyRequests {
 				death_cnt++
@@ -77,10 +73,9 @@ func PostParserGenerator(shortcode string) func() (instagram.Post, error) {
 				death_cnt++
 				continue // RETRY INSTRUCTION
 			}
-			return
+			return post, nil
 		}
 		// aborted when the maximum death count is exceeded
-		err = fmt.Errorf("death count exceeded %d", death_cnt)
-		return
+		return post, fmt.Errorf("death count exceeded %d", death_cnt)
 	}
 }
