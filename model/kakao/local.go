@@ -10,8 +10,8 @@ type MapInfo struct {
 		CategoryGroupCode string `json:"category_group_code"`
 		CategoryGroupName string `json:"category_group_name"`
 		Phone             string `json:"phone"`
-		Address           string `json:"address"`
-		RoadAddressName   string `json:"road_adress_name"`
+		AddressName       string `json:"address_name"`
+		RoadAddressName   string `json:"road_address_name"`
 	} `json:"documents"`
 	Meta struct {
 		IsEnd bool `json:"is_end"`
