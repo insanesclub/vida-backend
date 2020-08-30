@@ -14,7 +14,7 @@ Back-end module of VIDA(Visualization tool for Instagram Data Analysis)
 
    - Fake user detector
    - Influencer intervention measurement
-   - prices
+   - /details
    
    
 
@@ -81,31 +81,27 @@ Back-end module of VIDA(Visualization tool for Instagram Data Analysis)
 
 
 
-3. prices
+3. /details
 
-   음식점들의 상세 정보(상호명, 전화번호, 도로명 주소, 메뉴와 가격 리스트)를 알아내는 서비스입니다.
+   음식점들의 상세 정보(상호명, 전화번호, 도로명 주소, 평균 가격)를 알아내는 서비스입니다.
 
    이를 통해 특수 작물을 판매하는 음식점을 파악하기 수월해질 것으로 보입니다.
 
-   | method |    path     |    request    |        response         |
-   | :----: | :---------: | :-----------: | :---------------------: |
-   | `GET`  | /api/prices | (string) 날짜 | (JSON) 음식점 상세 정보 |
+   | method |     path     |    request    |               response               |
+   | :----: | :----------: | :-----------: | :----------------------------------: |
+   | `GET`  | /api/details | (string) 날짜 | (Array&lt;JSON&gt;) 음식점 상세 정보 |
 
    - Query param 예시
 
-     `/api/prices/date=20200828`
+     `/api/prices?tag=finedining`
 
    - Response body 예시
 
-     ![sample](https://user-images.githubusercontent.com/29545214/91490868-1b884f80-e8ee-11ea-870f-28ad467c5b60.png)
+     ![sample](https://user-images.githubusercontent.com/29545214/91670070-f2b5c380-eb54-11ea-81fa-46e377f9c242.png)
 
      
 
-     - date: (timestamp) 날짜
-     - place_info: (Array) 해당 일자에 수집한 음식점 정보
      - place_name: (string) 상호명
      - phone: (string) 전화번호
-     - road_address-name: (string) 도로명 주소
-     - menu_list: (Array) 메뉴와 가격 정보
-     - menu_name: (string) 메뉴 이름
-     - menu_price: (number) 메뉴 가격
+     - road_address_name: (string) 도로명 주소
+     - average_price: (number) 평균 가격 (내림차순으로 정렬되며, 가격 정보가 없을 경우 0으로 표시됩니다.)

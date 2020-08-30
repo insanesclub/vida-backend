@@ -24,8 +24,8 @@ type Post struct {
 	} `json:"graphql"`
 }
 
-// FilterByLocation returns geotag of p if.
-func (p Post) FilterByLocation(tag string) (_ string) {
+// FilterByLocation returns geotag of p if the geotag is accurate.
+func (p Post) FilterByLocation() (_ string) {
 	if strings.Contains(p.GraphQL.ShortcodeMedia.Location.AddressJSON,
 		p.GraphQL.ShortcodeMedia.Location.Name) {
 		return

@@ -12,7 +12,7 @@ func Uploads(tag string) map[string]int {
 	usernames := make(chan string)
 	syncer := new(sync.WaitGroup)
 	syncer.Add(1)
-	go parsePage(tag, usernames, syncer)
+	go _parsePage(tag, usernames, syncer)
 	go func() {
 		syncer.Wait()
 		close(usernames)
@@ -25,7 +25,7 @@ func Uploads(tag string) map[string]int {
 	return uploads
 }
 
-func parsePage(tag string, ch chan<- string, syncer *sync.WaitGroup) {
+func _parsePage(tag string, ch chan<- string, syncer *sync.WaitGroup) {
 	defer syncer.Done()
 
 	var (
@@ -41,7 +41,7 @@ func parsePage(tag string, ch chan<- string, syncer *sync.WaitGroup) {
 		shortcodes := page.FilterByTimestamp()
 		for _, shortcode := range shortcodes {
 			syncer.Add(1)
-			go parseUsername(shortcode, ch, syncer)
+			go _parseUsername(shortcode, ch, syncer)
 		}
 		time.Sleep(0) // force context switching
 		goNext = (len(page.GraphQL.Hashtag.EdgeHashtagToMedia.Edges) == len(shortcodes)) &&
@@ -49,7 +49,7 @@ func parsePage(tag string, ch chan<- string, syncer *sync.WaitGroup) {
 	}
 }
 
-func parseUsername(shortcode string, ch chan<- string, syncer *sync.WaitGroup) {
+func _parseUsername(shortcode string, ch chan<- string, syncer *sync.WaitGroup) {
 	defer syncer.Done()
 
 	post, err := instagram.PostParserGenerator(shortcode)()
