@@ -15,6 +15,9 @@ build:
 build_linux:
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINARY_FILE) -v .
 
+build_raspberry:
+	GOOS=linux GOARCH=arm64 $(GOBUILD) -o $(BINARY_FILE) -v .
+
 test:
 	$(GOTEST) -v .
 
