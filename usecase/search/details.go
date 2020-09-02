@@ -7,141 +7,110 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
-	local "github.com/maengsanha/vida-backend/model/kakao"
-	"github.com/maengsanha/vida-backend/usecase/kakao"
+	"github.com/maengsanha/vida-backend/dataservice/kakao"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/maengsanha/vida-backend/usecase/instagram"
+	"github.com/maengsanha/vida-backend/dataservice/instagram"
+	insta "github.com/maengsanha/vida-backend/model/instagram"
+	"github.com/maengsanha/vida-backend/model/kakao/local"
 )
 
-var total int
-
 type detail struct {
-	PlaceName    string `json:"place_name"`
-	Phone        string `json:"phone"`
-	Address      string `json:"road_address_name"`
-	AveragePrice string `json:"average_price"`
+	PlaceName       string `json:"place_name"`
+	RoadAddressName string `json:"road_address_name"`
+	Phone           string `json:"phone"`
+	AveragePrice    string `json:"average_price"`
+	price           int
 }
 
-// Details collects more detailed information about the results of the tag search on Instagram.
-func Details(tag string) (detail_infos []detail) {
-	locations := make(chan string)
+// Details returns more detailed data using Kakao search results.
+func Details(tag string) (details []detail) {
+	loc_ch := make(chan string)
 	syncer := new(sync.WaitGroup)
 	syncer.Add(1)
-	go parsePage(tag, locations, syncer)
+	go func() {
+		defer syncer.Done()
+		parseLocation(tag, syncer, loc_ch)
+	}()
+
 	go func() {
 		syncer.Wait()
-		close(locations)
+		close(loc_ch)
 	}()
 
 	loc_set := make(map[string]struct{})
-	for location := range locations {
-		loc_set[location] = struct{}{}
+	for loc := range loc_ch {
+		loc_set[loc] = struct{}{}
 	}
-	fmt.Printf("collect %d locations from Instagram\n", len(loc_set))
 
-	local_docs := make(chan local.Document)
-	for location := range loc_set {
-		syncer.Add(1)
-		go parseMapInfo(location, local_docs, syncer)
+	doc_map := make(map[string]local.Document)
+	for loc := range loc_set {
+		time.Sleep(0) // force context switching
+		if resp, err := kakao.MapParserGenerator(loc)(); err == nil && len(resp.Documents) > 0 {
+			doc_map[resp.Documents[0].ID] = resp.Documents[0]
+		}
 	}
+
+	detail_ch := make(chan detail)
+	for _, doc := range doc_map {
+		syncer.Add(1)
+		go func(doc local.Document) {
+			defer syncer.Done()
+			if price, err := parsePrice(doc.PlaceName, doc.ID); err == nil {
+				detail_ch <- detail{
+					PlaceName:       doc.PlaceName,
+					RoadAddressName: doc.RoadAddressName,
+					Phone:           doc.Phone,
+					price:           price,
+				}
+			}
+		}(doc)
+	}
+
 	go func() {
 		syncer.Wait()
-		close(local_docs)
+		close(detail_ch)
 	}()
 
-	local_doc_set := make(map[string]local.Document)
-	for doc := range local_docs {
-		local_doc_set[doc.ID] = doc
+	for d := range detail_ch {
+		if d.price > 0 {
+			d.AveragePrice = strconv.Itoa(d.price)
+		}
+		details = append(details, d)
 	}
-	fmt.Printf("collect %d documents from Kakao\n", len(local_doc_set))
 
-	details := make(chan detail)
-	for _, doc := range local_doc_set {
-		syncer.Add(1)
-		go parseDetails(doc, details, syncer)
-	}
-	go func() {
-		syncer.Wait()
-		close(details)
-	}()
-
-	for d := range details {
-		detail_infos = append(detail_infos, d)
-	}
-	sort.Slice(detail_infos, func(i, j int) bool {
-		return detail_infos[i].AveragePrice > detail_infos[j].AveragePrice
-	})
+	sort.Slice(details, func(i, j int) bool { return details[i].price > details[j].price })
 	return
 }
 
-func parsePage(tag string, ch chan<- string, syncer *sync.WaitGroup) {
-	defer syncer.Done()
-
-	parser := instagram.PageParserGenerator(tag)
-
-	for total < 1e5 {
-		page, err := parser()
+func parseLocation(tag string, syncer *sync.WaitGroup, ch chan<- string) {
+	worker := instagram.PageParserGenerator(tag)
+	for {
+		page, err := worker()
 		if err != nil {
 			return
 		}
-		total += len(page.GraphQL.Hashtag.EdgeHashtagToMedia.Edges)
 
-		for _, edge := range page.GraphQL.Hashtag.EdgeHashtagToMedia.Edges {
-			syncer.Add(1)
-			go parseLocation(edge.Node.Shortcode, ch, syncer)
+		workers := make([]func() (insta.Post, error), len(page.GraphQL.Hashtag.EdgeHashtagToMedia.Edges))
+		for i, edge := range page.GraphQL.Hashtag.EdgeHashtagToMedia.Edges { // register workers
+			workers[i] = instagram.PostParserGenerator(edge.Node.Shortcode)
+		}
+
+		syncer.Add(len(workers))
+		for _, worker := range workers {
+			go func(worker func() (insta.Post, error)) {
+				defer syncer.Done()
+				if post, err := worker(); err == nil {
+					ch <- post.FilterByLocation()
+				}
+			}(worker)
 		}
 	}
 }
 
-func parseLocation(shortcode string, ch chan<- string, syncer *sync.WaitGroup) {
-	defer syncer.Done()
-
-	post, err := instagram.PostParserGenerator(shortcode)()
-	if err != nil {
-		return
-	}
-	loc := post.FilterByLocation()
-	if len(loc) > 0 {
-		ch <- loc
-	}
-}
-
-func parseMapInfo(location string, ch chan<- local.Document, syncer *sync.WaitGroup) {
-	defer syncer.Done()
-
-	map_info, err := kakao.LocalAPIParserGenerator(location)()
-	if err != nil {
-		return
-	}
-	if len(map_info.Documents) < 1 {
-		return
-	}
-	ch <- map_info.Documents[0]
-}
-
-func parseDetails(doc local.Document, ch chan<- detail, syncer *sync.WaitGroup) {
-	defer syncer.Done()
-
-	price, err := averagePrice(doc.PlaceName, doc.ID)
-	if err != nil {
-		return
-	}
-	var price_str string
-	if price > 0 {
-		price_str = strconv.Itoa(price)
-	}
-
-	ch <- detail{
-		PlaceName:    doc.PlaceName,
-		Phone:        doc.Phone,
-		Address:      doc.RoadAddressName,
-		AveragePrice: price_str,
-	}
-}
-
-func averagePrice(name, cid string) (average int, _ error) {
+func parsePrice(name, cid string) (average int, _ error) {
 	resp, err := http.Get(fmt.Sprintf("https://m.search.daum.net/kakao?w=poi&q=%s&cid=%s", name, cid))
 	if err != nil {
 		return average, err
