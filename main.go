@@ -13,9 +13,8 @@ func main() {
 
 	engine := gin.Default()
 	api := engine.Group("/api")
-	{
-		api.GET("/uploads", middleware.Uploads())
-		api.GET("/details", middleware.Details())
-	}
+
+	api.GET("/details", middleware.Details())
+
 	engine.Run(":8080")
 }
